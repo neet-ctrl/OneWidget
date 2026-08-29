@@ -63,6 +63,7 @@
         android:gravity="center"
         android:includeFontPadding="false"
         android:maxLines="1"
+        android:paddingBottom="2dp"
         android:text="Sunday, 18 May"
         android:textColor="@color/date_pink"
         android:textSize="11sp" />
@@ -93,6 +94,7 @@
             android:fontFamily="sans-serif"
             android:includeFontPadding="false"
             android:maxLines="1"
+            android:translationY="-1dp"
             android:text="Cloudy"
             android:textColor="@color/weather_dark"
             android:textSize="11sp" />

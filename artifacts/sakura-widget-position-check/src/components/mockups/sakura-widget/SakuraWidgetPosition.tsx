@@ -120,6 +120,7 @@ export function SakuraWidgetPosition() {
           font-weight: 500;
           line-height: 1;
           white-space: nowrap;
+          transform: translateY(-.45cqw);
         }
 
         .calendar-icon {
@@ -174,6 +175,7 @@ export function SakuraWidgetPosition() {
           font-size: 2.25cqw;
           font-weight: 400;
           line-height: 1;
+          transform: translateY(-.45cqw);
         }
       `}</style>
     </main>
