@@ -16,8 +16,9 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.widget.RemoteViews
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -55,6 +56,7 @@ class SakuraWidgetProvider : AppWidgetProvider() {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_DATE_CHANGED,
             Intent.ACTION_LOCALE_CHANGED
             -> {
                 scheduleMinuteRefresh(context)
@@ -84,15 +86,24 @@ class SakuraWidgetProvider : AppWidgetProvider() {
 
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
         val now = System.currentTimeMillis()
-        val weatherIsStale = now -
-            preferences.getLong(KEY_WEATHER_ATTEMPT, 0L) >= WEATHER_REFRESH_MS
+        val shouldFetchWeather = synchronized(refreshLock) {
+            val weatherIsStale = now -
+                preferences.getLong(KEY_WEATHER_ATTEMPT, 0L) >= WEATHER_REFRESH_MS
 
-        if (!weatherIsStale) {
+            if (!weatherIsStale || weatherFetchInProgress) {
+                false
+            } else {
+                weatherFetchInProgress = true
+                preferences.edit().putLong(KEY_WEATHER_ATTEMPT, now).apply()
+                true
+            }
+        }
+
+        if (!shouldFetchWeather) {
             onFinished()
             return
         }
 
-        preferences.edit().putLong(KEY_WEATHER_ATTEMPT, now).apply()
         Thread {
             try {
                 WeatherRepository.fetch()?.let { reading ->
@@ -105,6 +116,9 @@ class SakuraWidgetProvider : AppWidgetProvider() {
                     render(context, manager, ids, reading)
                 }
             } finally {
+                synchronized(refreshLock) {
+                    weatherFetchInProgress = false
+                }
                 onFinished()
             }
         }.start()
@@ -116,10 +130,12 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         ids: IntArray,
         weather: WeatherRepository.Reading,
     ) {
-        val now = Date()
-        val time = SimpleDateFormat("hh:mm", Locale.ENGLISH).format(now)
-        val meridiem = SimpleDateFormat("a", Locale.ENGLISH).format(now)
-        val date = SimpleDateFormat("EEEE, d MMMM", Locale.ENGLISH).format(now)
+        // Take one timezone-aware snapshot so the displayed clock and date
+        // can never come from different instants around a minute or midnight.
+        val now = ZonedDateTime.now(ZoneId.systemDefault())
+        val time = TIME_FORMATTER.format(now)
+        val meridiem = MERIDIEM_FORMATTER.format(now)
+        val date = DATE_FORMATTER.format(now)
 
         ids.forEach { id ->
             val bitmap = renderBitmap(
@@ -298,19 +314,34 @@ class SakuraWidgetProvider : AppWidgetProvider() {
     private fun scheduleMinuteRefresh(context: Context) {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         val pendingIntent = refreshPendingIntent(context)
-        val nextMinute = ((System.currentTimeMillis() / MINUTE_MS) + 1L) * MINUTE_MS
+        val nextMinute = ZonedDateTime.now(ZoneId.systemDefault())
+            .withSecond(0)
+            .withNano(0)
+            .plusMinutes(1)
+            .toInstant()
+            .toEpochMilli()
 
         alarmManager.cancel(pendingIntent)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            !alarmManager.canScheduleExactAlarms()
-        ) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                !alarmManager.canScheduleExactAlarms()
+            ) {
+                alarmManager.setAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    nextMinute,
+                    pendingIntent,
+                )
+            } else {
+                alarmManager.setExactAndAllowWhileIdle(
+                    AlarmManager.RTC_WAKEUP,
+                    nextMinute,
+                    pendingIntent,
+                )
+            }
+        } catch (_: SecurityException) {
+            // The exact-alarm permission can change while the app is running.
+            // Keep the clock alive with an idle-safe inexact alarm instead.
             alarmManager.setAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                nextMinute,
-                pendingIntent,
-            )
-        } else {
-            alarmManager.setExactAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 nextMinute,
                 pendingIntent,
@@ -340,7 +371,12 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         private const val KEY_CONDITION = "condition"
         private const val KEY_WEATHER_TIME = "weather_time"
         private const val KEY_WEATHER_ATTEMPT = "weather_attempt"
-        private const val MINUTE_MS = 60_000L
         private const val WEATHER_REFRESH_MS = 15 * 60 * 1000L
+        private val TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm", Locale.ENGLISH)
+        private val MERIDIEM_FORMATTER = DateTimeFormatter.ofPattern("a", Locale.ENGLISH)
+        private val DATE_FORMATTER =
+            DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.ENGLISH)
+        private val refreshLock = Any()
+        private var weatherFetchInProgress = false
     }
 }
