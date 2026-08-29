@@ -150,6 +150,18 @@ class SakuraWidgetProvider : AppWidgetProvider() {
             )
             val views = RemoteViews(context.packageName, R.layout.widget_sakura).apply {
                 setImageViewBitmap(R.id.widget_render, bitmap)
+                setOnClickPendingIntent(
+                    R.id.widget_time_touch,
+                    pickerPendingIntent(context, AppPickerActivity.TARGET_TIME, REQUEST_TIME),
+                )
+                setOnClickPendingIntent(
+                    R.id.widget_date_touch,
+                    pickerPendingIntent(context, AppPickerActivity.TARGET_DATE, REQUEST_DATE),
+                )
+                setOnClickPendingIntent(
+                    R.id.widget_weather_touch,
+                    pickerPendingIntent(context, AppPickerActivity.TARGET_WEATHER, REQUEST_WEATHER),
+                )
                 setContentDescription(
                     R.id.widget_root,
                     context.getString(
@@ -164,6 +176,21 @@ class SakuraWidgetProvider : AppWidgetProvider() {
             manager.updateAppWidget(id, views)
         }
     }
+
+    private fun pickerPendingIntent(
+        context: Context,
+        target: String,
+        requestCode: Int,
+    ): PendingIntent =
+        PendingIntent.getActivity(
+            context,
+            requestCode,
+            Intent(context, AppPickerActivity::class.java).putExtra(
+                AppPickerActivity.EXTRA_TARGET,
+                target,
+            ),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
 
     private fun renderBitmap(
         context: Context,
@@ -368,6 +395,9 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         private const val ACTION_REFRESH = "com.sakura.widget.ACTION_REFRESH"
         private const val ACTION_EXACT_ALARM_PERMISSION_CHANGED =
             "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
+        private const val REQUEST_TIME = 2001
+        private const val REQUEST_DATE = 2002
+        private const val REQUEST_WEATHER = 2003
         private const val PREFERENCES = "sakura_widget_preferences"
         private const val KEY_TEMPERATURE = "temperature"
         private const val KEY_CONDITION = "condition"

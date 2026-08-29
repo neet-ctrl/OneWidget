@@ -14,4 +14,102 @@
         android:importantForAccessibility="no"
         android:scaleType="fitXY"
         android:src="@drawable/widget_art_clean" />
+
+    <!-- Transparent proportional touch targets; they do not alter the artwork. -->
+    <LinearLayout
+        android:id="@+id/widget_touch_layer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.30"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.27"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.18"
+                android:text="" />
+
+            <ImageView
+                android:id="@+id/widget_time_touch"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.52"
+                android:background="@android:color/transparent"
+                android:clickable="true"
+                android:contentDescription="@null"
+                android:focusable="true"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.30"
+                android:text="" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.13"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.21"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.25"
+                android:text="" />
+
+            <ImageView
+                android:id="@+id/widget_date_touch"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.43"
+                android:background="@android:color/transparent"
+                android:clickable="true"
+                android:contentDescription="@null"
+                android:focusable="true"
+                android:importantForAccessibility="no" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.07"
+                android:text="" />
+
+            <ImageView
+                android:id="@+id/widget_weather_touch"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.25"
+                android:background="@android:color/transparent"
+                android:clickable="true"
+                android:contentDescription="@null"
+                android:focusable="true"
+                android:importantForAccessibility="no" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="0.09"
+            android:text="" />
+    </LinearLayout>
 </FrameLayout>

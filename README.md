@@ -9,6 +9,9 @@ no web app and no JavaScript runtime.
 - Redraws the clock every second using India Standard Time (`Asia/Kolkata`),
   scheduling the next second boundary with an exact alarm when the device
   allows it and an Android-safe idle-mode fallback.
+- Tapping the time, date/day, or weather opens the selected matching app;
+  ambiguous or unavailable matches show a searchable app picker that remembers
+  a separate choice for each area.
 - To enable the most accurate timing on Android 12+, allow **Sakura Clock
   Weather** under **Settings → Apps → Special app access → Alarms & reminders**.
 - Displays the current day and date in the widget.

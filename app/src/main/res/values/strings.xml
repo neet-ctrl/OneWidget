@@ -3,4 +3,13 @@
     <string name="app_name">Sakura Clock Weather</string>
     <string name="widget_name">Sakura clock and weather</string>
     <string name="widget_content_description">%1$s, %2$s, %3$s, %4$s</string>
+    <string name="picker_title">Choose an app</string>
+    <string name="picker_search_hint">Search apps</string>
+    <string name="picker_close">Close</string>
+    <string name="picker_no_apps">No launchable apps were found on this device.</string>
+    <string name="picker_time_subtitle">Choose which app opens for the clock</string>
+    <string name="picker_date_subtitle">Choose which app opens for the date</string>
+    <string name="picker_weather_subtitle">Choose which app opens for the weather</string>
+    <string name="picker_app_subtitle">Tap to open this app</string>
+    <string name="picker_unavailable">is no longer available</string>
 </resources>
