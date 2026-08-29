@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">Sakura Clock Weather</string>
     <string name="widget_name">Sakura clock and weather</string>
+    <string name="widget_name_second">Sakura garden clock and weather</string>
     <string name="widget_content_description">%1$s, %2$s, %3$s, %4$s</string>
     <string name="picker_title">Choose an app</string>
     <string name="picker_search_hint">Search apps</string>
