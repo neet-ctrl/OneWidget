@@ -40,7 +40,7 @@ class FourthSakuraWidgetProvider : BaseSakuraWidgetProvider() {
         )
 
         textPaint.textSize = designWidth * 0.043f
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        textPaint.typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         canvas.drawText(
             monthDay(date),
             centerX,
