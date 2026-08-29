@@ -68,7 +68,7 @@ class AppPickerActivity : Activity() {
 
     private fun showPicker() {
         allApps = launcherApps()
-        val background = LinearLayout(this).apply {
+        val rootContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), dp(18))
             setBackgroundColor(Color.rgb(255, 248, 250))
@@ -80,7 +80,7 @@ class AppPickerActivity : Activity() {
             background = rounded(Color.WHITE, 26f)
             elevation = dp(8).toFloat()
         }
-        background.addView(
+        rootContainer.addView(
             card,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -154,7 +154,7 @@ class AppPickerActivity : Activity() {
             ),
         )
 
-        setContentView(background)
+        setContentView(rootContainer)
         populateApps("")
         search.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -315,7 +315,6 @@ class AppPickerActivity : Activity() {
             )
             else -> listOf(
                 Intent(AlarmClock.ACTION_SHOW_ALARMS),
-                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CLOCK),
             )
         }
 
