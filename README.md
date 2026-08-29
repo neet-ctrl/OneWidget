@@ -17,8 +17,12 @@ no web app and no JavaScript runtime.
 ## Build with GitHub Actions
 
 Push this repository to GitHub. The workflow in
-`.github/workflows/build-android.yml` builds the debug APK and publishes it as a
-workflow artifact named `sakura-clock-weather-debug`.
+`.github/workflows/build-android.yml` builds the debug APK and creates a GitHub
+Release with the APK attached as `sakura-clock-weather.apk`.
+
+Releases are created on pushes to `main` or `master`, and from a manual
+workflow run. Pull requests only build-check the APK and do not publish a
+release.
 
 ## Local build
 
