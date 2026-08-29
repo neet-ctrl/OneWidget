@@ -17,6 +17,7 @@ class SecondSakuraWidgetProvider : BaseSakuraWidgetProvider() {
         time: String,
         meridiem: String,
         date: String,
+        dateWithYear: String,
         weather: WeatherRepository.Reading,
     ) {
         drawClock(canvas, time, meridiem)

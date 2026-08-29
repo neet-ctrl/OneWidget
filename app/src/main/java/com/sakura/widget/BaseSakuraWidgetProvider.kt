@@ -12,6 +12,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.RectF
 import android.os.Build
 import android.widget.RemoteViews
 import java.time.ZoneId
@@ -26,12 +27,14 @@ abstract class BaseSakuraWidgetProvider : AppWidgetProvider() {
     protected abstract val layoutResId: Int
     protected abstract val designWidth: Float
     protected abstract val designHeight: Float
+    protected open val preserveArtworkAspect: Boolean = false
 
     protected abstract fun drawDynamicContent(
         canvas: Canvas,
         time: String,
         meridiem: String,
         date: String,
+        dateWithYear: String,
         weather: WeatherRepository.Reading,
     )
 
@@ -146,6 +149,7 @@ abstract class BaseSakuraWidgetProvider : AppWidgetProvider() {
         val time = TIME_FORMATTER.format(now)
         val meridiem = MERIDIEM_FORMATTER.format(now)
         val date = DATE_FORMATTER.format(now)
+        val dateWithYear = DATE_WITH_YEAR_FORMATTER.format(now)
 
         ids.forEach { id ->
             val bitmap = renderBitmap(
@@ -155,6 +159,7 @@ abstract class BaseSakuraWidgetProvider : AppWidgetProvider() {
                 time,
                 meridiem,
                 date,
+                dateWithYear,
                 weather,
             )
             val views = RemoteViews(context.packageName, layoutResId).apply {
@@ -208,6 +213,7 @@ abstract class BaseSakuraWidgetProvider : AppWidgetProvider() {
         time: String,
         meridiem: String,
         date: String,
+        dateWithYear: String,
         weather: WeatherRepository.Reading,
     ): Bitmap {
         val options = manager.getAppWidgetOptions(appWidgetId)
@@ -226,14 +232,31 @@ abstract class BaseSakuraWidgetProvider : AppWidgetProvider() {
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val source = BitmapFactory.decodeResource(context.resources, artworkResId)
-        canvas.drawBitmap(
-            source,
-            null,
-            Rect(0, 0, widthPx, heightPx),
-            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
-        )
-        canvas.scale(widthPx / designWidth, heightPx / designHeight)
-        drawDynamicContent(canvas, time, meridiem, date, weather)
+        val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
+        if (preserveArtworkAspect) {
+            val scale = minOf(widthPx / designWidth, heightPx / designHeight)
+            val artworkWidth = designWidth * scale
+            val artworkHeight = designHeight * scale
+            val offsetX = (widthPx - artworkWidth) / 2f
+            val offsetY = (heightPx - artworkHeight) / 2f
+            canvas.drawBitmap(
+                source,
+                null,
+                RectF(offsetX, offsetY, offsetX + artworkWidth, offsetY + artworkHeight),
+                bitmapPaint,
+            )
+            canvas.translate(offsetX, offsetY)
+            canvas.scale(scale, scale)
+        } else {
+            canvas.drawBitmap(
+                source,
+                null,
+                Rect(0, 0, widthPx, heightPx),
+                bitmapPaint,
+            )
+            canvas.scale(widthPx / designWidth, heightPx / designHeight)
+        }
+        drawDynamicContent(canvas, time, meridiem, date, dateWithYear, weather)
         source.recycle()
         return bitmap
     }
@@ -320,6 +343,8 @@ abstract class BaseSakuraWidgetProvider : AppWidgetProvider() {
         private val MERIDIEM_FORMATTER = DateTimeFormatter.ofPattern("a", Locale.ENGLISH)
         private val DATE_FORMATTER =
             DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.ENGLISH)
+        private val DATE_WITH_YEAR_FORMATTER =
+            DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.ENGLISH)
         private val refreshLock = Any()
         private var weatherFetchInProgress = false
     }
