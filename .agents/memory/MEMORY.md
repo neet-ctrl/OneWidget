@@ -1,1 +1,2 @@
 - [Preview artifact runtime](preview-runtime.md) — isolated preview workflows need artifact-local resolution for the shared JavaScript runtime.
+- [Android widget coordinate system](android-widget-coordinate-system.md) — render dynamic content with the artwork so launcher sizing cannot separate their positions.
