@@ -39,14 +39,14 @@ class ThirdSakuraWidgetProvider : BaseSakuraWidgetProvider() {
     private fun drawDate(canvas: Canvas, dayDate: String, date: String) {
         val dayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(194, 91, 122)
-            textSize = designWidth * 0.078f
+            textSize = designWidth * 0.064f
             typeface = Typeface.create("serif", Typeface.ITALIC)
             textAlign = Paint.Align.CENTER
         }
         canvas.drawText(
             currentDayFromDate(dayDate),
-            designWidth * 0.245f,
-            designHeight * 0.57f,
+            designWidth * 0.292f,
+            designHeight * 0.655f,
             dayPaint,
         )
 
