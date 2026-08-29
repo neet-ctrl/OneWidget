@@ -30,7 +30,7 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
-        scheduleMinuteRefresh(context)
+        scheduleSecondRefresh(context)
         val result = goAsync()
         updateWidgets(context, appWidgetIds) {
             result.finish()
@@ -38,7 +38,7 @@ class SakuraWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onEnabled(context: Context) {
-        scheduleMinuteRefresh(context)
+        scheduleSecondRefresh(context)
         val result = goAsync()
         updateWidgets(context) {
             result.finish()
@@ -46,7 +46,7 @@ class SakuraWidgetProvider : AppWidgetProvider() {
     }
 
     override fun onDisabled(context: Context) {
-        cancelMinuteRefresh(context)
+        cancelSecondRefresh(context)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -57,9 +57,10 @@ class SakuraWidgetProvider : AppWidgetProvider() {
             Intent.ACTION_TIME_CHANGED,
             Intent.ACTION_TIMEZONE_CHANGED,
             Intent.ACTION_DATE_CHANGED,
-            Intent.ACTION_LOCALE_CHANGED
+            Intent.ACTION_LOCALE_CHANGED,
+            ACTION_EXACT_ALARM_PERMISSION_CHANGED
             -> {
-                scheduleMinuteRefresh(context)
+                scheduleSecondRefresh(context)
                 val result = goAsync()
                 updateWidgets(context) {
                     result.finish()
@@ -130,9 +131,9 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         ids: IntArray,
         weather: WeatherRepository.Reading,
     ) {
-        // Take one timezone-aware snapshot so the displayed clock and date
-        // can never come from different instants around a minute or midnight.
-        val now = ZonedDateTime.now(ZoneId.systemDefault())
+        // Take one India-time snapshot so the displayed clock and date/day can
+        // never come from different instants around a second or midnight.
+        val now = ZonedDateTime.now(INDIA_ZONE)
         val time = TIME_FORMATTER.format(now)
         val meridiem = MERIDIEM_FORMATTER.format(now)
         val date = DATE_FORMATTER.format(now)
@@ -311,13 +312,12 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         )
     }
 
-    private fun scheduleMinuteRefresh(context: Context) {
+    private fun scheduleSecondRefresh(context: Context) {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
         val pendingIntent = refreshPendingIntent(context)
-        val nextMinute = ZonedDateTime.now(ZoneId.systemDefault())
-            .withSecond(0)
+        val nextSecond = ZonedDateTime.now(INDIA_ZONE)
             .withNano(0)
-            .plusMinutes(1)
+            .plusSeconds(1)
             .toInstant()
             .toEpochMilli()
 
@@ -328,13 +328,13 @@ class SakuraWidgetProvider : AppWidgetProvider() {
             ) {
                 alarmManager.setAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
-                    nextMinute,
+                    nextSecond,
                     pendingIntent,
                 )
             } else {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
-                    nextMinute,
+                    nextSecond,
                     pendingIntent,
                 )
             }
@@ -343,13 +343,13 @@ class SakuraWidgetProvider : AppWidgetProvider() {
             // Keep the clock alive with an idle-safe inexact alarm instead.
             alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
-                nextMinute,
+                nextSecond,
                 pendingIntent,
             )
         }
     }
 
-    private fun cancelMinuteRefresh(context: Context) {
+    private fun cancelSecondRefresh(context: Context) {
         context.getSystemService(AlarmManager::class.java)
             .cancel(refreshPendingIntent(context))
     }
@@ -366,12 +366,15 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         private const val DESIGN_WIDTH = 1280f
         private const val DESIGN_HEIGHT = 563f
         private const val ACTION_REFRESH = "com.sakura.widget.ACTION_REFRESH"
+        private const val ACTION_EXACT_ALARM_PERMISSION_CHANGED =
+            "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
         private const val PREFERENCES = "sakura_widget_preferences"
         private const val KEY_TEMPERATURE = "temperature"
         private const val KEY_CONDITION = "condition"
         private const val KEY_WEATHER_TIME = "weather_time"
         private const val KEY_WEATHER_ATTEMPT = "weather_attempt"
         private const val WEATHER_REFRESH_MS = 15 * 60 * 1000L
+        private val INDIA_ZONE: ZoneId = ZoneId.of("Asia/Kolkata")
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("hh:mm", Locale.ENGLISH)
         private val MERIDIEM_FORMATTER = DateTimeFormatter.ofPattern("a", Locale.ENGLISH)
         private val DATE_FORMATTER =

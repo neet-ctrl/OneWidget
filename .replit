@@ -1,4 +1,4 @@
-modules = ["python-base-3.13", "nodejs-20"]
+modules = ["python-base-3.13", "nodejs-20", "java-graalvm22.3"]
 
 [[ports]]
 localPort = 8080
@@ -16,3 +16,4 @@ runButton = "Project"
 
 [nix]
 channel = "stable-25_05"
+packages = ["gradle"]

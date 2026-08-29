@@ -6,8 +6,11 @@ no web app and no JavaScript runtime.
 ## What it does
 
 - Uses the supplied Sakura widget artwork as the visual base.
-- Updates the time at the next minute boundary using an exact alarm when the
-  device allows it, with an Android-safe idle-mode fallback.
+- Redraws the clock every second using India Standard Time (`Asia/Kolkata`),
+  scheduling the next second boundary with an exact alarm when the device
+  allows it and an Android-safe idle-mode fallback.
+- To enable the most accurate timing on Android 12+, allow **Sakura Clock
+  Weather** under **Settings → Apps → Special app access → Alarms & reminders**.
 - Displays the current day and date in the widget.
 - Starts with the reference weather value of `34° / Cloudy`.
 - Refreshes weather from the no-key Open-Meteo endpoint roughly every 15 minutes.
