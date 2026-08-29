@@ -2,7 +2,7 @@
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_name_second"
     android:initialLayout="@layout/widget_sakura_second"
-    android:minHeight="155dp"
+    android:minHeight="165dp"
     android:minWidth="250dp"
     android:previewImage="@drawable/widget_art_second"
     android:resizeMode="horizontal|vertical"
