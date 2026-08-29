@@ -7,11 +7,19 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.Bundle
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Rect
+import android.graphics.Typeface
 import android.widget.RemoteViews
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.max
+import kotlin.math.roundToInt
 
 class SakuraWidgetProvider : AppWidgetProvider() {
 
@@ -103,12 +111,17 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         val date = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now)
 
         ids.forEach { id ->
+            val bitmap = renderBitmap(
+                context = context,
+                manager = manager,
+                appWidgetId = id,
+                time = time,
+                meridiem = meridiem,
+                date = date,
+                weather = weather,
+            )
             val views = RemoteViews(context.packageName, R.layout.widget_sakura).apply {
-                setTextViewText(R.id.widget_time, time)
-                setTextViewText(R.id.widget_meridiem, meridiem)
-                setTextViewText(R.id.widget_date, date)
-                setTextViewText(R.id.widget_temperature, weather.temperature)
-                setTextViewText(R.id.widget_condition, weather.condition)
+                setImageViewBitmap(R.id.widget_render, bitmap)
                 setContentDescription(
                     R.id.widget_root,
                     context.getString(
@@ -122,6 +135,145 @@ class SakuraWidgetProvider : AppWidgetProvider() {
             }
             manager.updateAppWidget(id, views)
         }
+    }
+
+    private fun renderBitmap(
+        context: Context,
+        manager: AppWidgetManager,
+        appWidgetId: Int,
+        time: String,
+        meridiem: String,
+        date: String,
+        weather: WeatherRepository.Reading,
+    ): Bitmap {
+        val options = manager.getAppWidgetOptions(appWidgetId)
+        val widthDp = max(
+            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
+            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH),
+        ).coerceAtLeast(250)
+        val heightDp = max(
+            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT),
+            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT),
+        ).coerceAtLeast(110)
+        val density = context.resources.displayMetrics.density
+        val widthPx = (widthDp * density).roundToInt().coerceAtLeast(1)
+        val heightPx = (heightDp * density).roundToInt().coerceAtLeast(1)
+
+        val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val source = BitmapFactory.decodeResource(
+            context.resources,
+            R.drawable.widget_art_clean,
+        )
+        canvas.drawBitmap(
+            source,
+            null,
+            Rect(0, 0, widthPx, heightPx),
+            Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG),
+        )
+
+        canvas.scale(widthPx / DESIGN_WIDTH, heightPx / DESIGN_HEIGHT)
+        drawClock(canvas, time, meridiem)
+        drawDate(canvas, date)
+        drawWeather(canvas, weather)
+        source.recycle()
+        return bitmap
+    }
+
+    private fun drawClock(canvas: Canvas, time: String, meridiem: String) {
+        val timePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(202, 109, 136)
+            textSize = DESIGN_WIDTH * 0.117f
+            typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+            letterSpacing = 0.01f
+            setShadowLayer(2.5f, 0f, 1f, 0x55FFFFFF)
+        }
+        val meridiemPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(202, 109, 136)
+            textSize = DESIGN_WIDTH * 0.0305f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        }
+        val timeWidth = timePaint.measureText(time)
+        val meridiemWidth = meridiemPaint.measureText(meridiem)
+        val groupWidth = timeWidth + DESIGN_WIDTH * 0.006f + meridiemWidth
+        val clockLeft = DESIGN_WIDTH * 0.235f
+        val clockWidth = DESIGN_WIDTH * 0.445f
+        val timeX = clockLeft + (clockWidth - groupWidth) / 2f
+        val clockBottom = DESIGN_HEIGHT * 0.54f
+
+        canvas.drawText(time, timeX, clockBottom - 5f, timePaint)
+        canvas.drawText(
+            meridiem,
+            timeX + timeWidth + DESIGN_WIDTH * 0.006f,
+            clockBottom - DESIGN_WIDTH * 0.016f,
+            meridiemPaint,
+        )
+    }
+
+    private fun drawDate(canvas: Canvas, date: String) {
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(178, 105, 126)
+            textSize = DESIGN_WIDTH * 0.0225f
+            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        }
+        val iconSize = DESIGN_WIDTH * 0.0155f
+        val gap = DESIGN_WIDTH * 0.013f
+        val textWidth = paint.measureText(date)
+        val totalWidth = iconSize + gap + textWidth
+        val centerX = DESIGN_WIDTH * (0.306f + 0.333f / 2f)
+        val centerY = DESIGN_HEIGHT * 0.758f +
+            DESIGN_HEIGHT * 0.106f / 2f -
+            DESIGN_WIDTH * 0.0045f
+        val iconLeft = centerX - totalWidth / 2f
+        val iconTop = centerY - iconSize / 2f
+        val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(178, 105, 126)
+            style = Paint.Style.STROKE
+            strokeWidth = DESIGN_WIDTH * 0.002f
+        }
+        canvas.drawRoundRect(
+            iconLeft,
+            iconTop,
+            iconLeft + iconSize,
+            iconTop + iconSize,
+            DESIGN_WIDTH * 0.0028f,
+            DESIGN_WIDTH * 0.0028f,
+            iconPaint,
+        )
+        canvas.drawLine(
+            iconLeft,
+            iconTop + iconSize * 0.29f,
+            iconLeft + iconSize,
+            iconTop + iconSize * 0.29f,
+            iconPaint,
+        )
+        canvas.drawText(
+            date,
+            iconLeft + iconSize + gap,
+            centerY - centeredBaselineOffset(paint),
+            paint,
+        )
+    }
+
+    private fun drawWeather(canvas: Canvas, weather: WeatherRepository.Reading) {
+        val temperaturePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(62, 65, 71)
+            textSize = DESIGN_WIDTH * 0.055f
+            typeface = Typeface.create("sans-serif", Typeface.BOLD)
+        }
+        val conditionPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.rgb(62, 65, 71)
+            textSize = DESIGN_WIDTH * 0.0225f
+            typeface = Typeface.create("sans-serif", Typeface.NORMAL)
+        }
+        val x = DESIGN_WIDTH * 0.828f
+        canvas.drawText(weather.temperature, x, DESIGN_HEIGHT * 0.80f, temperaturePaint)
+        canvas.drawText(weather.condition, x, DESIGN_HEIGHT * 0.874f, conditionPaint)
+    }
+
+    private fun centeredBaselineOffset(paint: Paint): Float {
+        val metrics = paint.fontMetrics
+        return (metrics.ascent + metrics.descent) / 2f
     }
 
     private fun loadWeather(context: Context): WeatherRepository.Reading {
@@ -156,6 +308,8 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         )
 
     companion object {
+        private const val DESIGN_WIDTH = 1280f
+        private const val DESIGN_HEIGHT = 563f
         private const val ACTION_REFRESH = "com.sakura.widget.ACTION_REFRESH"
         private const val PREFERENCES = "sakura_widget_preferences"
         private const val KEY_TEMPERATURE = "temperature"
