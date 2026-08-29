@@ -1,0 +1,49 @@
+
+Screenshot of http://127.0.0.1:18374/__widget-mockup/preview/sakura-widget/SakuraWidgetPosition
+$ python - <<'PY' import xml.etree.ElementTree as ET paths = [ 'app/src/main/res/layout/widget_sakura.xml', 'app/src/main/res/drawable/ic_calendar.xml', 'app/src/main/res/xml/sakura_widget_info.xml', 'app/src/main/AndroidManifest.xml', ] for p in paths: ET.parse(p) print('XML OK', p) PY git diff --check printf '\nworkflow build config:\n' sed -n '19,43p' .github/workflows/build-android.yml
+
+Reflecting on device updates
+The final reference screenshot is captured, the preview is running cleanly, and the Android source now uses the same proportional coordinate system as the artifact. I’m recording this Android-specific rendering decision for future widget changes, then I’ll summarize exactly what was fixed and what the GitHub build will do.
+
+You’re right—the previous Android layout was wrong. I fixed the actual cause instead of adjusting more hardcoded positions.
+
+What changed
+Android now renders the artwork and dynamic content together as one bitmap.
+Clock, AM/PM, date, calendar icon, temperature, and “Cloudy” all use the same proportional coordinates as the artifact.
+The layout now scales using the widget’s actual size from the launcher.
+Fixed dp overlays that caused the text to jump near the top have been removed.
+The Android artwork is the exact clean Sakura template used in the artifact.
+Live time, date, and weather updates remain functional.
+The final artifact screenshot is shown above and the preview workflow is running cleanly.
+
+The GitHub Action is configured to build with Java 17 and Gradle 8.9, then attach the APK to a GitHub Release. I could not run the Android build locally because this workspace does not have the Android SDK installed, but the Android XML files pass validation and the workflow contains the required build setup.
+
+But see screenshot why black areas not exact same outline so it best fit in 2nd screenshot like 3rd screenshot ok and see why times or dates are not changing perfectly at exact times
+
+Free
+2 minutes ago
+Adjusting screenshot elements
+Adjusting screenshot elements
+
+I’m thinking about how to best fit the target screenshot by using original artwork with the black background removed. The user mentioned that the outline should match the third screenshot, so it seems the widget should have no black rectangle. I’m planning to use a transparent PNG and make sure the root layout is transparent too.
+
+But, if the artifact preview has a black background, should I update it? They mentioned the artifact was perfect earlier, so I need to be careful with changes.
+
+Considering app permissions
+Evaluating image processing steps
+Checking alarm settings
+The new screenshot exposes two separate bugs:
+
+The black rectangle is the opaque black background from the JPEG artwork, not the intended widget outline.
+The one-minute time mismatch comes from the inexact repeating alarm, so the widget can update late.
+I’m fixing both: making only the outer black area transparent while preserving the Sakura outline, and changing refresh scheduling to the next exact minute boundary with an Android-safe fallback.
+
+The transparency conversion hit a filename mismatch—the new attachment’s stored name differs from the name shown in the message. I’m locating the exact stored file now, then I’ll rerun the conversion and finish the timing fix without changing direction.
+
+$ set -e SOURCE=attached_assets/IMG_20260829_203357_147_1788016622480.jpg for out in /tmp/widget-transparent.png artifacts/sakura-widget-position-check/public/images/sakura-empty-template.png app/src/main/res/drawable-nodpi/widget_art_clean.png; do mkdir -p "$(dirname "$out")" convert "$SOURCE" -alpha on -bordercolor black -border 1 -fuzz 12% -fill none \ -draw 'matte 0,0 floodfill' -shave 1x1 "$out" done identify -format 'artifact=%m %wx%h channels=%[channels] corner=%[pixel:p{0,0}]\n' artifacts/sakura-widget-position-check/public/images/sakura-empty-template.png identify -format 'android=%m %wx%h channels=%[channels] corner=%[pixel:p{0,0}]\n' app/src/main/res/drawable-nodpi/widget_art_clean.png
+
+Use a more capable model when needed for this request?
+Got it, staying on Free.
+Add images and screenshot to attached assets
+Aug 30, 2026, 12:27 AM
+You've used up your daily credits. Upgrade to continue.

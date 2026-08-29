@@ -7,6 +7,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -49,10 +50,18 @@ class SakuraWidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-        if (intent.action == ACTION_REFRESH) {
-            val result = goAsync()
-            updateWidgets(context) {
-                result.finish()
+        when (intent.action) {
+            ACTION_REFRESH,
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_LOCALE_CHANGED
+            -> {
+                scheduleMinuteRefresh(context)
+                val result = goAsync()
+                updateWidgets(context) {
+                    result.finish()
+                }
             }
         }
     }
@@ -74,14 +83,16 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         render(context, manager, ids, loadWeather(context))
 
         val preferences = context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
-        val weatherIsStale = System.currentTimeMillis() -
-            preferences.getLong(KEY_WEATHER_TIME, 0L) > WEATHER_REFRESH_MS
+        val now = System.currentTimeMillis()
+        val weatherIsStale = now -
+            preferences.getLong(KEY_WEATHER_ATTEMPT, 0L) >= WEATHER_REFRESH_MS
 
         if (!weatherIsStale) {
             onFinished()
             return
         }
 
+        preferences.edit().putLong(KEY_WEATHER_ATTEMPT, now).apply()
         Thread {
             try {
                 WeatherRepository.fetch()?.let { reading ->
@@ -106,9 +117,9 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         weather: WeatherRepository.Reading,
     ) {
         val now = Date()
-        val time = SimpleDateFormat("hh:mm", Locale.getDefault()).format(now)
-        val meridiem = SimpleDateFormat("a", Locale.getDefault()).format(now)
-        val date = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now)
+        val time = SimpleDateFormat("hh:mm", Locale.ENGLISH).format(now)
+        val meridiem = SimpleDateFormat("a", Locale.ENGLISH).format(now)
+        val date = SimpleDateFormat("EEEE, d MMMM", Locale.ENGLISH).format(now)
 
         ids.forEach { id ->
             val bitmap = renderBitmap(
@@ -286,12 +297,25 @@ class SakuraWidgetProvider : AppWidgetProvider() {
 
     private fun scheduleMinuteRefresh(context: Context) {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
-        alarmManager.setInexactRepeating(
-            AlarmManager.RTC,
-            System.currentTimeMillis() + 60_000L,
-            60_000L,
-            refreshPendingIntent(context),
-        )
+        val pendingIntent = refreshPendingIntent(context)
+        val nextMinute = ((System.currentTimeMillis() / MINUTE_MS) + 1L) * MINUTE_MS
+
+        alarmManager.cancel(pendingIntent)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            !alarmManager.canScheduleExactAlarms()
+        ) {
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                nextMinute,
+                pendingIntent,
+            )
+        } else {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                nextMinute,
+                pendingIntent,
+            )
+        }
     }
 
     private fun cancelMinuteRefresh(context: Context) {
@@ -315,6 +339,8 @@ class SakuraWidgetProvider : AppWidgetProvider() {
         private const val KEY_TEMPERATURE = "temperature"
         private const val KEY_CONDITION = "condition"
         private const val KEY_WEATHER_TIME = "weather_time"
+        private const val KEY_WEATHER_ATTEMPT = "weather_attempt"
+        private const val MINUTE_MS = 60_000L
         private const val WEATHER_REFRESH_MS = 15 * 60 * 1000L
     }
 }

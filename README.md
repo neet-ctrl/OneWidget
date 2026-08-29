@@ -6,23 +6,56 @@ no web app and no JavaScript runtime.
 ## What it does
 
 - Uses the supplied Sakura widget artwork as the visual base.
-- Updates the time every minute when Android allows the scheduled refresh.
+- Updates the time at the next minute boundary using an exact alarm when the
+  device allows it, with an Android-safe idle-mode fallback.
 - Displays the current day and date in the widget.
 - Starts with the reference weather value of `34° / Cloudy`.
 - Refreshes weather from the no-key Open-Meteo endpoint roughly every 15 minutes.
 - Uses Delhi coordinates by default. Change `LATITUDE` and `LONGITUDE` in
   `WeatherRepository.kt` for another city.
 - Can be resized horizontally and vertically by the launcher.
+- Uses a transparent outside area, so the launcher wallpaper shows around the
+  Sakura outline instead of a black rectangle.
 
 ## Build with GitHub Actions
 
 Push this repository to GitHub. The workflow in
-`.github/workflows/build-android.yml` builds the debug APK and creates a GitHub
-Release with the APK attached as `sakura-clock-weather.apk`.
+`.github/workflows/build-android.yml` builds the unsigned debug APK as a
+build-check. The separate `.github/workflows/release-android.yml` workflow
+builds the signed release APK and creates a GitHub Release with the APK
+attached as `sakura-clock-weather.apk`.
 
-Releases are created on pushes to `main` or `master`, and from a manual
-workflow run. Pull requests only build-check the APK and do not publish a
-release.
+Signed releases are created on pushes to `main` or `master`, and from a
+manual workflow run. Pull requests only run the debug build-check, so signing
+secrets are never made available to pull-request code.
+
+### GitHub Actions signing secrets
+
+Add these four repository secrets in **GitHub → Settings → Secrets and
+variables → Actions**:
+
+| Secret | Value |
+| --- | --- |
+| `ANDROID_KEYSTORE_BASE64` | Base64 text of your `.keystore` file |
+| `ANDROID_KEYSTORE_PASSWORD` | Password used for the keystore |
+| `ANDROID_KEY_ALIAS` | Alias of the signing key, for example `sakura` |
+| `ANDROID_KEY_PASSWORD` | Password used for that key alias |
+
+Generate a new keystore on a secure computer and keep the original file backed
+up privately:
+
+```bash
+keytool -genkeypair -v \
+  -keystore sakura-release.keystore \
+  -alias sakura \
+  -keyalg RSA -keysize 2048 -validity 10000
+
+base64 -w 0 sakura-release.keystore > sakura-release.keystore.base64
+```
+
+Copy the one-line contents of `sakura-release.keystore.base64` into
+`ANDROID_KEYSTORE_BASE64`. Do not commit the keystore, the base64 file, or any
+of the passwords to GitHub.
 
 ## Local build
 
