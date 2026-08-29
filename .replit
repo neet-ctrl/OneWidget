@@ -1,9 +1,17 @@
-modules = ["python-base-3.13"]
+modules = ["python-base-3.13", "nodejs-20"]
 
 [[ports]]
 localPort = 8080
-externalPort = 80
+
+[[ports]]
+localPort = 18374
 
 [[ports]]
 localPort = 24086
 externalPort = 3000
+
+[workflows]
+runButton = "Project"
+
+[nix]
+channel = "stable-25_05"
