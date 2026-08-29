@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Sakura Clock Weather</string>
+    <string name="widget_name">Sakura clock and weather</string>
+    <string name="widget_content_description">%1$s, %2$s, %3$s, %4$s</string>
+</resources>

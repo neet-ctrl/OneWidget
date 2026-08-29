@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="clock_pink">#C86A86</color>
+    <color name="date_pink">#B56C7F</color>
+    <color name="weather_dark">#3A3C42</color>
+</resources>
