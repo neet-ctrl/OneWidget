@@ -5,7 +5,6 @@ import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.graphics.Color
 import android.graphics.Typeface
@@ -31,9 +30,8 @@ import kotlin.math.roundToInt
 /**
  * Routes widget taps to an installed app.
  *
- * A single unambiguous target opens directly. If Android reports several
- * matching apps, or none for the requested category, the user gets a
- * searchable launcher-app list and the choice is remembered for that area.
+ * The first tap always shows a searchable app list so the user controls the
+ * destination. Later taps open that area's remembered choice directly.
  */
 class AppPickerActivity : Activity() {
 
@@ -48,9 +46,8 @@ class AppPickerActivity : Activity() {
 
         val preferredPackage = preferences.getString(preferenceKey(target), null)
         if (preferredPackage != null) {
-            val preferred = resolveTargetApps(target)
+            val preferred = pickerApps(target)
                 .firstOrNull { it.packageName == preferredPackage }
-                ?: launcherApps().firstOrNull { it.packageName == preferredPackage }
 
             if (preferred != null && launch(preferred)) {
                 return
@@ -58,16 +55,11 @@ class AppPickerActivity : Activity() {
             preferences.edit().remove(preferenceKey(target)).apply()
         }
 
-        val targetApps = resolveTargetApps(target)
-        if (targetApps.size == 1 && launch(targetApps.first())) {
-            return
-        }
-
         showPicker()
     }
 
     private fun showPicker() {
-        allApps = launcherApps()
+        allApps = pickerApps(target)
         val rootContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), dp(18))
@@ -200,8 +192,9 @@ class AppPickerActivity : Activity() {
             isClickable = true
             isFocusable = true
             setOnClickListener {
-                if (launch(option)) {
-                    preferences.edit().putString(preferenceKey(target), option.packageName).apply()
+                preferences.edit().putString(preferenceKey(target), option.packageName).apply()
+                if (!launch(option)) {
+                    preferences.edit().remove(preferenceKey(target)).apply()
                 }
             }
         }
@@ -262,14 +255,26 @@ class AppPickerActivity : Activity() {
             Toast.makeText(this, option.label + " " + getString(R.string.picker_unavailable), Toast.LENGTH_SHORT)
                 .show()
             false
+        } catch (_: SecurityException) {
+            Toast.makeText(this, option.label + " " + getString(R.string.picker_unavailable), Toast.LENGTH_SHORT)
+                .show()
+            false
         }
+
+    private fun pickerApps(target: String): List<AppOption> {
+        val results = LinkedHashMap<String, AppOption>()
+        (launcherApps() + resolveTargetApps(target)).forEach { option ->
+            results.putIfAbsent(option.packageName, option)
+        }
+        return results.values.sortedBy { it.label.lowercase() }
+    }
 
     private fun resolveTargetApps(target: String): List<AppOption> {
         val results = LinkedHashMap<String, AppOption>()
         targetIntents(target).forEach { queryIntent ->
             packageManager.queryIntentActivities(
                 queryIntent,
-                PackageManager.MATCH_DEFAULT_ONLY,
+                0,
             ).forEach { info ->
                 val option = appOption(info, queryIntent)
                 results.putIfAbsent(option.packageName, option)
@@ -283,7 +288,7 @@ class AppPickerActivity : Activity() {
         val results = LinkedHashMap<String, AppOption>()
         packageManager.queryIntentActivities(
             queryIntent,
-            PackageManager.MATCH_DEFAULT_ONLY,
+            0,
         ).forEach { info ->
             val option = appOption(info, queryIntent)
             if (option.packageName != packageName) {
@@ -295,11 +300,12 @@ class AppPickerActivity : Activity() {
 
     private fun appOption(info: ResolveInfo, baseIntent: Intent): AppOption {
         val activityInfo = info.activityInfo
+        val launcherIntent = packageManager.getLaunchIntentForPackage(activityInfo.packageName)
         return AppOption(
             packageName = activityInfo.packageName,
             label = info.loadLabel(packageManager).toString(),
             icon = info.loadIcon(packageManager),
-            openIntent = Intent(baseIntent).setComponent(
+            openIntent = launcherIntent ?: Intent(baseIntent).setComponent(
                 ComponentName(activityInfo.packageName, activityInfo.name),
             ),
         )
